@@ -1,0 +1,101 @@
+use std
+use bio
+
+const space = {c
+	-> c == ' ' || c == '\t' || c == '\n'
+}
+
+const getword = {bin
+	var sz = 0
+	var sb = std.mksb()
+	var c = ' '
+
+	while space(c)
+		match bio.getc(bin)
+		| `bio.Ok c1: c = c1
+		| `bio.Eof:   -> `std.None
+		| _:          std.fatal("error while reading")
+		;;
+	;;
+	while !space(c)
+		std.sbputc(sb, c)
+		sz++
+		match bio.getc(bin)
+		| `bio.Ok c1: c = c1
+		| `bio.Eof:   break
+		| _:          std.fatal("error while reading")
+		;;
+	;;
+	-> `std.Some (std.sbfin(sb), sz)
+}
+
+const main = {args
+
+	var cmd = std.optparse(args, &[
+		.argdesc = "",
+		.minargs = 0,
+		.maxargs = 0,
+		.opts = [
+			[.opt='n', .arg="N", .desc="emit lines of N characters"],
+		][:]
+	])
+	var optn = 60
+	for opt in cmd.opts
+		match opt
+		| ('n', nopt):
+			match std.intparse(nopt)
+			| `std.Some n: optn = n
+			| _:
+			;;
+		|_:
+		;;
+	;;
+
+	var bin = bio.mkfile(0, bio.Rd)
+	var dot = false
+	var spc
+	var len = 0
+	var line = std.mksb()
+
+	while true
+		match getword(bin)
+		| `std.Some (w, wsz):
+
+			if len == 0
+				if wsz > optn
+					std.put("{}\n", w)
+				else
+					len = wsz
+					std.sbputs(line, w)
+				;;
+			else
+				if dot
+					spc = "  "[:]
+				else
+					spc = " "[:]
+				;;
+
+				if len + spc.len + wsz > optn
+					std.put("{}\n", std.sbpeek(line))
+					len = 0
+					std.sbtrim(line, len)
+					len = wsz
+					std.sbputs(line, w)
+				else
+					len += spc.len + wsz
+					std.sbputs(line, spc)
+					std.sbputs(line, w)
+				;;
+			;;
+			std.slfree(w)
+			dot = w[w.len - 1] == ('.': byte)
+
+		| `std.None:
+			break
+		;;
+	;;
+
+	if len != 0
+		std.put("{}\n", std.sbpeek(line))
+	;;
+}

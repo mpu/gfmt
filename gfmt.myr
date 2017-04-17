@@ -87,8 +87,8 @@ const main = {args
 					std.sbputs(line, w)
 				;;
 			;;
-			std.slfree(w)
 			dot = w[w.len - 1] == ('.': byte)
+			std.slfree(w)
 
 		| `std.None:
 			break
